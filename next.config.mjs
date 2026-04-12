@@ -13,7 +13,8 @@ const nextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, X-Payment, X-Payment-Response" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, X-Payment, X-Payment-Response, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE" },
+          { key: "Access-Control-Expose-Headers", value: "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-Payment-Response" },
         ],
       },
     ];

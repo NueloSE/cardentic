@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { FlowStep, type StepStatus } from "@/components/FlowStep";
 import { AgentCard, type AgentCardProps, type AgentStatus } from "@/components/AgentCard";
@@ -82,6 +82,9 @@ export default function ProcessPage() {
     );
   }, []);
 
+  // Keep a stable ref to handleEvent so the SSE listener never goes stale
+  const handleEventRef = useRef<((event: Record<string, unknown>) => void) | null>(null);
+
   // ── SSE connection ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionId) return;
@@ -94,7 +97,7 @@ export default function ProcessPage() {
     es.addEventListener("message", (e) => {
       try {
         const event = JSON.parse(e.data) as Record<string, unknown>;
-        handleEvent(event);
+        handleEventRef.current?.(event);
       } catch {
         // ignore malformed events
       }
@@ -146,11 +149,12 @@ export default function ProcessPage() {
           subtasks.forEach((st) => {
             addLog(makeLog("info", `→ ${st.agent}: ${st.subtask.slice(0, 60)}…`));
           });
-          // Mark all relevant agents as waiting
-          agents.forEach((a) => {
-            const match = subtasks.find((st) => st.agent === a.name);
-            if (match) updateAgent(a.name, { status: "waiting" });
-          });
+          // Mark matched agents as waiting (use functional update to avoid stale closure on agents)
+          setAgents((prev) =>
+            prev.map((a) =>
+              subtasks.find((st) => st.agent === a.name) ? { ...a, status: "waiting" } : a
+            )
+          );
           break;
         }
 
@@ -204,9 +208,13 @@ export default function ProcessPage() {
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [agents, sessionId],
+    [sessionId, updateStep, updateAgent, addLog],
   );
+
+  // Keep ref in sync so SSE listener always calls the latest version
+  useEffect(() => {
+    handleEventRef.current = handleEvent;
+  }, [handleEvent]);
 
   const copyResult = () => {
     if (!result) return;
