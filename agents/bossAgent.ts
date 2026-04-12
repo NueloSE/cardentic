@@ -86,13 +86,14 @@ async function callSubAgent(
   const data = await res.json() as { agent: string; price: number; result: unknown };
 
   // Extract tx hash from settlement header if present
-  const settleHeader = res.headers.get("x-payment-response");
+  const settleHeader = res.headers.get("x-payment-response") ?? res.headers.get("X-Payment-Response");
   let txHash: string | undefined;
   if (settleHeader) {
     try {
       const { decodePaymentResponseHeader } = await import("@x402/core/http");
-      const settled = decodePaymentResponseHeader(settleHeader);
-      txHash = (settled as Record<string, unknown>).transaction as string | undefined;
+      const settled = decodePaymentResponseHeader(settleHeader) as Record<string, unknown>;
+      // Try all known field names the facilitator might use
+      txHash = (settled.transaction ?? settled.txHash ?? settled.txid ?? settled.hash) as string | undefined;
     } catch { /* no hash */ }
   }
 
@@ -100,7 +101,7 @@ async function callSubAgent(
     type: "agent_paid",
     agent: plan.agent,
     amount: String(data.price ?? plan.price),
-    txHash: txHash ?? "",
+    txHash: txHash ?? undefined,
   });
 
   return data.result;

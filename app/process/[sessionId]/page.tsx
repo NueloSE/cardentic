@@ -29,7 +29,7 @@ interface SessionResult {
 // ─── Initial state ────────────────────────────────────────────────────────────
 
 const INITIAL_STEPS: PipelineStep[] = [
-  { label: "Payment confirmed",    sub: "Stripe → $10 charged",            status: "pending" },
+  { label: "Payment confirmed",    sub: "Stripe checkout",                  status: "pending" },
   { label: "USDC minted",          sub: "Stellar testnet transfer",         status: "pending" },
   { label: "Boss Agent activated", sub: "Task decomposition",               status: "pending" },
   { label: "Sub-agents running",   sub: "x402 micropayments",               status: "pending" },
@@ -131,10 +131,15 @@ export default function ProcessPage() {
 
       switch (type) {
         case "session_start": {
+          const amount = event.amount as string;
           setTask(event.task as string);
           setPhase("running");
-          updateStep(0, { status: "done", detail: `Stripe session ${sessionId?.slice(0, 12)}…` });
-          addLog(makeLog("success", "Payment confirmed via Stripe", `$${event.amount}`));
+          updateStep(0, {
+            status: "done",
+            sub: `Stripe → $${amount} charged`,
+            detail: `session ${sessionId?.slice(0, 12)}…`,
+          });
+          addLog(makeLog("success", "Payment confirmed via Stripe", `$${amount}`));
           break;
         }
 
@@ -189,12 +194,14 @@ export default function ProcessPage() {
 
         case "agent_paid": {
           const agentName = event.agent as string;
+          const txHash = (event.txHash as string) || undefined;
           updateAgent(agentName, {
             status: "paid",
             amount: event.amount as string,
-            txHash: event.txHash as string,
+            txHash,
           });
-          addLog(makeLog("payment", `${agentName} paid & working`, `tx: ${shortenHash(event.txHash as string)}`));
+          const logMeta = txHash ? `tx: ${shortenHash(txHash)}` : undefined;
+          addLog(makeLog("payment", `${agentName} paid & working`, logMeta));
           break;
         }
 
