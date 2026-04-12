@@ -36,12 +36,9 @@ const INITIAL_STEPS: PipelineStep[] = [
   { label: "Result delivered",     sub: "Boss Agent aggregates",            status: "pending" },
 ];
 
-const INITIAL_AGENTS: AgentState[] = [
-  { name: "Flight Researcher", role: "Finds flights & transit",   emoji: "✈️", status: "idle" },
-  { name: "Hotel Researcher",  role: "Finds stays & lodging",     emoji: "🏨", status: "idle" },
-  { name: "Activity Planner",  role: "Plans activities & food",   emoji: "🗺️", status: "idle" },
-  { name: "Summarizer",        role: "Synthesises final output",  emoji: "📋", status: "idle" },
-];
+// Agent list is built dynamically from the planning SSE event — not hardcoded.
+// This ensures only agents actually selected for the task are shown.
+const INITIAL_AGENTS: AgentState[] = [];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +48,21 @@ function makeLog(
   meta?: string,
 ): LogEntry {
   return { id: crypto.randomUUID(), level, message, timestamp: new Date(), meta };
+}
+
+/** Pick an emoji for an agent based on its name */
+function agentEmoji(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("flight") || n.includes("airline") || n.includes("transit")) return "✈️";
+  if (n.includes("hotel") || n.includes("accommodation") || n.includes("stay") || n.includes("lodge")) return "🏨";
+  if (n.includes("activity") || n.includes("food") || n.includes("dining") || n.includes("restaurant")) return "🗺️";
+  if (n.includes("visa") || n.includes("passport") || n.includes("entry")) return "🛂";
+  if (n.includes("weather") || n.includes("climate") || n.includes("forecast")) return "🌤️";
+  if (n.includes("budget") || n.includes("cost") || n.includes("price") || n.includes("finance")) return "💰";
+  if (n.includes("research") || n.includes("analys") || n.includes("summar")) return "📋";
+  if (n.includes("rent") || n.includes("property") || n.includes("real estate")) return "🏠";
+  if (n.includes("electric") || n.includes("utility") || n.includes("power")) return "⚡";
+  return "🤖";
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -143,18 +155,28 @@ export default function ProcessPage() {
         }
 
         case "planning": {
-          updateStep(2, { status: "done", detail: `${(event.subtasks as unknown[]).length} sub-tasks planned` });
-          updateStep(3, { status: "active" });
           const subtasks = event.subtasks as { agent: string; subtask: string }[];
+          updateStep(2, { status: "done", detail: `${subtasks.length} sub-tasks planned` });
+          updateStep(3, { status: "active" });
           subtasks.forEach((st) => {
             addLog(makeLog("info", `→ ${st.agent}: ${st.subtask.slice(0, 60)}…`));
           });
-          // Mark matched agents as waiting (use functional update to avoid stale closure on agents)
-          setAgents((prev) =>
-            prev.map((a) =>
-              subtasks.find((st) => st.agent === a.name) ? { ...a, status: "waiting" } : a
-            )
-          );
+          // Build agent list dynamically — only agents selected for this task + Summarizer
+          const dynamicAgents: AgentState[] = [
+            ...subtasks.map((st) => ({
+              name: st.agent,
+              role: st.subtask.slice(0, 40),
+              emoji: agentEmoji(st.agent),
+              status: "waiting" as AgentStatus,
+            })),
+            {
+              name: "Summarizer",
+              role: "Synthesises final output",
+              emoji: "📋",
+              status: "idle" as AgentStatus,
+            },
+          ];
+          setAgents(dynamicAgents);
           break;
         }
 
@@ -290,11 +312,22 @@ export default function ProcessPage() {
         <div className="min-w-0 flex flex-col gap-6">
           <div>
             <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-4">Sub-agents</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 stagger">
-              {agents.map((agent) => (
-                <AgentCard key={agent.name} {...agent} />
-              ))}
-            </div>
+            {agents.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="border border-border rounded-lg p-4 bg-card/50 animate-pulse">
+                    <div className="h-3 bg-secondary rounded w-2/3 mb-2" />
+                    <div className="h-2 bg-secondary rounded w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 stagger">
+                {agents.map((agent) => (
+                  <AgentCard key={agent.name} {...agent} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Result */}
