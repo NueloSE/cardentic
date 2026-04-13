@@ -10,27 +10,19 @@ export interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: Date;
-  meta?: string; // e.g. tx hash or amount
+  meta?: string;
 }
 
 interface LogPanelProps {
   entries: LogEntry[];
 }
 
-const LEVEL_STYLES: Record<LogLevel, string> = {
-  info:    "text-muted-foreground",
-  success: "text-success",
-  payment: "text-primary",
-  error:   "text-destructive",
-  system:  "text-muted-foreground/50",
-};
-
-const LEVEL_PREFIX: Record<LogLevel, string> = {
-  info:    "›",
-  success: "✓",
-  payment: "⟁",
-  error:   "✗",
-  system:  "#",
+const LEVEL_STYLE: Record<LogLevel, { text: string; prefix: string }> = {
+  system:  { text: "text-[#2e2e2e]",     prefix: "#" },
+  info:    { text: "text-[#555]",         prefix: ">" },
+  success: { text: "text-[#c8ff57]/80",   prefix: "✓" },
+  payment: { text: "text-[#c8ff57]",      prefix: "⟁" },
+  error:   { text: "text-red-400",        prefix: "✗" },
 };
 
 export function LogPanel({ entries }: LogPanelProps) {
@@ -41,42 +33,64 @@ export function LogPanel({ entries }: LogPanelProps) {
   }, [entries]);
 
   return (
-    <div className="border border-border rounded-lg bg-card card-highlight overflow-hidden h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-muted-foreground">live log</span>
+    <div className="border border-[#1e1e1e] rounded overflow-hidden h-full flex flex-col bg-[#080808]">
+
+      {/* Terminal titlebar */}
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#1a1a1a] bg-[#0d0d0d]">
+        <div className="flex gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1e1e1e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1e1e1e]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1e1e1e]" />
+        </div>
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <span className="text-[10px] font-mono text-[#2e2e2e] uppercase tracking-widest">
+            agent.log
+          </span>
           {entries.length > 0 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-primary dot-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#c8ff57] dot-pulse" />
           )}
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground/40">{entries.length} events</span>
+        <span className="text-[10px] font-mono text-[#222] tabular-nums">
+          {entries.length}
+        </span>
       </div>
 
-      {/* Log entries */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-[11px]">
+      {/* Log body */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 font-mono text-[11px]">
         {entries.length === 0 && (
-          <p className="text-muted-foreground/30 text-center py-8">Waiting for events…</p>
-        )}
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            className={cn("flex gap-2 animate-slide-up", LEVEL_STYLES[entry.level])}
-          >
-            <span className="shrink-0 text-muted-foreground/30 w-4 text-center">
-              {LEVEL_PREFIX[entry.level]}
-            </span>
-            <span className="flex-1 break-all leading-relaxed">
-              {entry.message}
-              {entry.meta && (
-                <span className="ml-1 text-muted-foreground/50">[{entry.meta}]</span>
-              )}
-            </span>
-            <span className="shrink-0 text-muted-foreground/25 text-[10px] tabular-nums">
-              {entry.timestamp.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
+          <div className="flex items-center gap-2 text-[#1e1e1e] pt-2">
+            <span>$</span>
+            <span className="animate-blink">_</span>
           </div>
-        ))}
+        )}
+
+        {entries.map((entry) => {
+          const style = LEVEL_STYLE[entry.level];
+          return (
+            <div
+              key={entry.id}
+              className={cn("flex gap-2.5 leading-relaxed animate-slide-up", style.text)}
+            >
+              <span className="shrink-0 w-3 text-center">{style.prefix}</span>
+              <span className="flex-1 break-all">
+                {entry.message}
+                {entry.meta && (
+                  <span className="ml-1.5 text-[10px] text-[#333] border border-[#1a1a1a] rounded px-1.5 py-px align-middle">
+                    {entry.meta}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-[#1e1e1e] tabular-nums text-[10px] mt-px">
+                {entry.timestamp.toLocaleTimeString("en-US", {
+                  hour12: false,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </div>

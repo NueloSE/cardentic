@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 import { TransactionBadge } from "./TransactionBadge";
-import { CheckCircle2, Clock, Loader2, Circle } from "lucide-react";
 
 export type AgentStatus = "idle" | "waiting" | "working" | "paid" | "done" | "error";
 
@@ -14,63 +13,84 @@ export interface AgentCardProps {
   result?: string;
 }
 
-const STATUS_CONFIG: Record<AgentStatus, { label: string; icon: React.ReactNode; className: string }> = {
-  idle:    { label: "Waiting",  icon: <Circle className="w-3 h-3" />,                              className: "text-muted-foreground/40 border-border" },
-  waiting: { label: "Queued",   icon: <Clock className="w-3 h-3" />,                               className: "text-muted-foreground border-border" },
-  working: { label: "Working",  icon: <Loader2 className="w-3 h-3 animate-spin" />,                className: "text-warning border-warning/30 bg-warning/5" },
-  paid:    { label: "Paid",     icon: <Loader2 className="w-3 h-3 animate-spin" />,                className: "text-primary border-primary/30 bg-primary/5" },
-  done:    { label: "Done",     icon: <CheckCircle2 className="w-3 h-3" />,                        className: "text-success border-success/30 bg-success/5" },
-  error:   { label: "Error",    icon: <Circle className="w-3 h-3 fill-destructive text-destructive" />, className: "text-destructive border-destructive/30" },
+const STATUS_LABEL: Record<AgentStatus, string> = {
+  idle:    "queued",
+  waiting: "queued",
+  working: "working",
+  paid:    "paid",
+  done:    "done",
+  error:   "error",
 };
 
 export function AgentCard({ name, role, emoji, status, amount, txHash, result }: AgentCardProps) {
-  const cfg = STATUS_CONFIG[status];
-  const isActive = status === "working" || status === "paid";
+  const isActive  = status === "working" || status === "paid";
+  const isDone    = status === "done";
+  const isIdle    = status === "idle" || status === "waiting";
+  const isError   = status === "error";
 
   return (
     <div
       className={cn(
-        "border rounded-lg p-4 transition-all duration-300",
-        isActive ? "border-border bg-card card-highlight" : "border-border bg-card/50",
-        status === "done" && "border-border bg-card card-highlight",
-        status === "idle" && "opacity-50",
+        "relative border rounded overflow-hidden transition-all duration-300",
+        isDone   && "border-[#c8ff57]/20 bg-[#0d0d0d]",
+        isActive && "border-[#c8ff57]/30 bg-[#0d0d0d]",
+        isIdle   && "border-[#1a1a1a] bg-[#0d0d0d] opacity-50",
+        isError  && "border-red-500/20 bg-[#0d0d0d]",
       )}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2.5">
-          <span className="text-lg leading-none">{emoji}</span>
-          <div>
-            <p className="text-sm font-medium text-foreground leading-none mb-0.5">{name}</p>
-            <p className="text-xs text-muted-foreground">{role}</p>
+      {/* Lime left-border accent when active/done */}
+      {(isActive || isDone) && (
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 w-[2px]",
+          isDone   ? "bg-[#c8ff57]/50"  : "bg-[#c8ff57]",
+        )} />
+      )}
+
+      {/* Scan line when working */}
+      {isActive && (
+        <div
+          className="absolute inset-x-0 h-[1px] bg-[#c8ff57]/40 animate-scan-h pointer-events-none"
+          style={{ top: "50%" }}
+        />
+      )}
+
+      <div className="px-4 py-3.5 pl-5">
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#ebebeb] truncate">{name}</p>
+            <p className="text-[11px] font-mono text-[#444] truncate mt-0.5">{role}</p>
           </div>
+          <span
+            className={cn(
+              "shrink-0 text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border",
+              isDone   && "border-[#c8ff57]/20 text-[#c8ff57] bg-[#c8ff57]/5",
+              isActive && "border-[#c8ff57]/30 text-[#c8ff57]/80",
+              isIdle   && "border-[#1e1e1e] text-[#333]",
+              isError  && "border-red-500/25 text-red-400",
+            )}
+          >
+            {STATUS_LABEL[status]}
+          </span>
         </div>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 text-[10px] font-medium border rounded px-1.5 py-0.5 shrink-0",
-            cfg.className,
-          )}
-        >
-          {cfg.icon}
-          {cfg.label}
-        </span>
+
+        {/* Result preview */}
+        {result && isDone && (
+          <p className="text-[11px] font-mono text-[#444] line-clamp-2 leading-relaxed mb-3 border-t border-[#1a1a1a] pt-2.5 mt-2.5">
+            {result}
+          </p>
+        )}
+
+        {/* Payment footer */}
+        {(amount || txHash) && (
+          <div className="flex items-center justify-between pt-2.5 border-t border-[#1a1a1a] mt-2">
+            {amount && (
+              <span className="text-[11px] font-mono text-[#c8ff57]">+{amount} USDC</span>
+            )}
+            {txHash && <TransactionBadge hash={txHash} />}
+          </div>
+        )}
       </div>
-
-      {/* Payment info */}
-      {(amount || txHash) && (
-        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-          {amount && (
-            <span className="text-xs font-mono text-success">+{amount} USDC</span>
-          )}
-          {txHash && <TransactionBadge hash={txHash} />}
-        </div>
-      )}
-
-      {/* Result preview */}
-      {result && status === "done" && (
-        <div className="mt-2 pt-2 border-t border-border">
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{result}</p>
-        </div>
-      )}
     </div>
   );
 }

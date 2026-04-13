@@ -1,0 +1,25 @@
+<svg width="200" height="40" viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon mark -->
+  <rect width="40" height="40" rx="9" fill="#111111"/>
+  <!-- connection lines -->
+  <line x1="20" y1="20" x2="20"   y2="8"   stroke="#c8ff57" stroke-width="1.8" stroke-opacity="0.35"/>
+  <line x1="20" y1="20" x2="10"   y2="30"  stroke="#c8ff57" stroke-width="1.8" stroke-opacity="0.35"/>
+  <line x1="20" y1="20" x2="30"   y2="30"  stroke="#c8ff57" stroke-width="1.8" stroke-opacity="0.35"/>
+  <!-- sub-agent nodes -->
+  <circle cx="20"  cy="8"   r="2.5"  fill="#c8ff57" fill-opacity="0.7"/>
+  <circle cx="10"  cy="30"  r="2.5"  fill="#c8ff57" fill-opacity="0.7"/>
+  <circle cx="30"  cy="30"  r="2.5"  fill="#c8ff57" fill-opacity="0.7"/>
+  <!-- boss agent node -->
+  <circle cx="20"  cy="20"  r="4.5"  fill="#c8ff57"/>
+
+  <!-- Wordmark: CARDENTIC -->
+  <text
+    x="52"
+    y="26"
+    font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+    font-size="17"
+    font-weight="700"
+    letter-spacing="-0.3"
+    fill="#ebebeb"
+  >Cardentic</text>
+</svg>
